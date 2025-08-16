@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Water Meter Dashboard</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; background:#e6f2ff; }
+.sidebar { height:100vh; background:linear-gradient(180deg,#007bff,#0056b3); color:white; padding-top:20px; position:fixed; left:0; top:0; width:220px; transition:width 0.3s; z-index:1000; }
+.sidebar.collapsed { width:60px; text-align:center; }
+.sidebar h4 { text-align:center; font-weight:bold; margin-bottom:20px; }
+.sidebar.collapsed h4 { display:none; }
+.sidebar a { display:block; color:white; padding:12px 20px; text-decoration:none; margin:5px 10px; border-radius:8px; transition:all 0.3s; }
+.sidebar a:hover { background-color: rgba(255,255,255,0.3); transform:scale(1.05); }
+.main-content { margin-left:240px; padding:20px; transition:margin-left 0.3s; }
+.main-content.expanded { margin-left:70px; }
+.card { border:none; border-radius:20px; box-shadow:0 8px 25px rgba(0,0,0,0.15); transition:transform 0.3s, box-shadow 0.3s; }
+.card:hover { transform:translateY(-7px); box-shadow:0 12px 30px rgba(0,0,0,0.25); }
+.alert-sign { font-weight:bold; color:white; padding:5px 12px; border-radius:25px; font-size:0.9rem; display:inline-block; min-width:70px; text-align:center; }
+.normal { background-color:#6fcf97; }
+.abnormal { background-color:#ff4c4c; }
+table tbody tr:hover { background-color:#d9edf7; cursor:pointer; }
+.page { display:none; }
+.page.active { display:block; }
+#searchInput { margin-bottom:15px; border-radius:25px; }
+@media(max-width:768px){ .main-content{margin-left:70px;padding:15px;} .sidebar{width:70px;} .sidebar a{font-size:0.8rem;padding:10px 12px;} }
+.card-gradient { background: linear-gradient(135deg,#00c6ff,#0072ff); color:white; }
+.abnormal-cell { background-color:rgba(255,76,76,0.2); }
+</style>
+</head>
+<body>
+<div class="sidebar" id="sidebar">
+    <h4>💧 Water Admin</h4>
+    <button class="btn btn-light btn-sm mb-3 w-75 mx-auto" id="toggleSidebar">☰</button>
+    <a href="#" data-page="dashboard">📊 Dashboard</a>
+    <a href="#" data-page="meters">📋 Meters</a>
+</div>
+<div class="main-content" id="mainContent">
+    <div id="dashboard" class="page active">
+        <h3>📊 Individual Meter Summary</h3>
+        <div class="row g-3 mb-4" id="meterSummaryCards"></div>
+        <div class="row g-3 mt-4">
+            <div class="col-12">
+                <div class="card p-4">
+                    <h5>📊 Rooms Status Summary (Normal vs Abnormal)</h5>
+                    <canvas id="summaryChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="meters" class="page">
+        <h3>📋 Meters & Tenants</h3>
+        <input type="text" id="searchInput" class="form-control" placeholder="Search Meter, Room or Tenant...">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Meter ID</th>
+                        <th>Room ID</th>
+                        <th>Tenant</th>
+                        <th>Total Liters (Till Today)</th>
+                        <th>Status</th>
+                        <th>Cost (Tsh)</th>
+                    </tr>
+                </thead>
+                <tbody id="meterTable"></tbody>
+            </table>
+        </div>
+        <div class="card p-3 mt-4 card-gradient">
+            <h5>📊 Selected Tenant Usage Trend</h5>
+            <label for="daySelect" class="form-label mt-2">Select Date:</label>
+            <select id="daySelect" class="form-select mb-3"></select>
+            <canvas id="roomChart" height="100"></canvas>
+        </div>
+    </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
