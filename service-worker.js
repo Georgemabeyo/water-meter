@@ -1,17 +1,14 @@
-self.addEventListener('install', e => {
-    e.waitUntil(
-        caches.open('water-meter-cache').then(cache => cache.addAll([
-            '/',
-            '/index.html',
-            '/app.js',
-            '/manifest.json',
-            'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
-            'https://cdn.jsdelivr.net/npm/chart.js'
-        ]))
+const CACHE_NAME = "water-dashboard-v1";
+const urlsToCache = ["/", "/index.html", "/css/style.css", "/manifest.json"];
+
+self.addEventListener("install", event => {
+    event.waitUntil(
+        caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
     );
 });
-self.addEventListener('fetch', e => {
-    e.respondWith(
-        caches.match(e.request).then(response => response || fetch(e.request))
+
+self.addEventListener("fetch", event => {
+    event.respondWith(
+        caches.match(event.request).then(response => response || fetch(event.request))
     );
 });
