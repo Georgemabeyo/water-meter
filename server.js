@@ -21,14 +21,36 @@ app.use(session({
     cookie: { maxAge: 24 * 60 * 60 * 1000 } // 1 day
 }));
 
-// Simple login route (for demonstration)
-app.post('/login', (req, res) => {
-    const { room } = req.body;
-    if (!room) return res.status(400).json({ error: "Room is required" });
+// Rooms data (simulate 10 rooms)
+const rooms = {};
+for (let i = 1; i <= 10; i++) {
+    const id = `R${i.toString().padStart(3, '0')}`; // Unique room ID: R001, R002...
+    rooms[id] = {
+        room: id,
+        currentUsage: Math.floor(Math.random() * 20),
+        totalUsage: Math.floor(Math.random() * 500),
+        amountDue: Math.floor(Math.random() * 10000),
+        lastReading: new Date().toISOString().split('T')[0],
+        dailyUsage: {
+            "2025-08-10": Math.floor(Math.random() * 20),
+            "2025-08-11": Math.floor(Math.random() * 20),
+            "2025-08-12": Math.floor(Math.random() * 20)
+        },
+        monthlyUsage: {
+            Jan: Math.floor(Math.random() * 200),
+            Feb: Math.floor(Math.random() * 200),
+            Mar: Math.floor(Math.random() * 200)
+        }
+    };
+}
 
-    // Store room in session
-    req.session.user = { room };
-    res.json({ message: "Logged in", room });
+// Login route (user selects room)
+app.post('/login', (req, res) => {
+    const { roomId } = req.body;
+    if (!roomId || !rooms[roomId]) return res.status(400).json({ error: "Invalid room ID" });
+
+    req.session.user = { roomId };
+    res.json({ message: "Logged in", roomId });
 });
 
 // Logout
@@ -37,30 +59,12 @@ app.post('/logout', (req, res) => {
     res.json({ message: "Logged out" });
 });
 
-// API to get water usage data
+// API to get room-specific water usage
 app.get('/api/data', (req, res) => {
     let data;
 
-    // If user is logged in, show room-specific data
-    if (req.session.user) {
-        const room = req.session.user.room;
-        data = {
-            room,
-            currentUsage: Math.floor(Math.random() * 20),
-            totalUsage: Math.floor(Math.random() * 500),
-            amountDue: Math.floor(Math.random() * 10000),
-            lastReading: new Date().toISOString().split('T')[0],
-            dailyUsage: {
-                "2025-08-10": Math.floor(Math.random() * 20),
-                "2025-08-11": Math.floor(Math.random() * 20),
-                "2025-08-12": Math.floor(Math.random() * 20)
-            },
-            monthlyUsage: {
-                Jan: Math.floor(Math.random() * 200),
-                Feb: Math.floor(Math.random() * 200),
-                Mar: Math.floor(Math.random() * 200)
-            }
-        };
+    if (req.session.user && rooms[req.session.user.roomId]) {
+        data = rooms[req.session.user.roomId];
     } else {
         // Public demo data
         data = {
