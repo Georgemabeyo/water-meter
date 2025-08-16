@@ -4,13 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Water Meter Dashboard</title>
+
+<!-- Manifest -->
 <link rel="manifest" href="manifest.json">
+
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
     body {
         margin: 0;
         font-family: Arial, sans-serif;
         transition: background 0.3s, color 0.3s;
+        background: #f9f9f9;
+        color: #333;
     }
 
     header {
@@ -46,11 +53,19 @@
         padding: 20px;
     }
 
-    pre {
-        background: rgba(0,0,0,0.05);
+    /* Data cards */
+    .data-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+    }
+
+    .card {
+        background: white;
         padding: 15px;
         border-radius: 8px;
-        overflow-x: auto;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        transition: background 0.3s, color 0.3s;
     }
 
     /* DARK MODE */
@@ -74,8 +89,10 @@
         color: #222;
     }
 
-    body.dark pre {
-        background: rgba(255,255,255,0.05);
+    body.dark .card {
+        background: #1e1e1e;
+        color: #f5f5f5;
+        box-shadow: 0 2px 5px rgba(255,255,255,0.1);
     }
 </style>
 </head>
@@ -87,7 +104,12 @@
 
     <main>
         <h2>Latest Data</h2>
-        <pre id="dataContainer">Loading...</pre>
+        <div id="dataContainer" class="data-grid">
+            <p>Loading...</p>
+        </div>
+
+        <h2>Usage Chart</h2>
+        <canvas id="usageChart"></canvas>
     </main>
 
 <script>
@@ -95,9 +117,38 @@ async function fetchData() {
     try {
         const res = await fetch('/api/data');
         const data = await res.json();
-        document.getElementById('dataContainer').innerText = JSON.stringify(data, null, 2);
+
+        // Onyesha data kwenye cards
+        const container = document.getElementById('dataContainer');
+        container.innerHTML = ""; 
+        Object.entries(data).forEach(([key, value]) => {
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `<h3>${key}</h3><p>${value}</p>`;
+            container.appendChild(card);
+        });
+
+        // Chart (mfano: daily usage)
+        if (data.dailyUsage) {
+            const ctx = document.getElementById("usageChart").getContext("2d");
+            new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: Object.keys(data.dailyUsage),
+                    datasets: [{
+                        label: "Water Usage (Liters)",
+                        data: Object.values(data.dailyUsage),
+                        borderColor: "#0077b6",
+                        fill: false,
+                        tension: 0.3
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+
     } catch (err) {
-        document.getElementById('dataContainer').innerText = "Error loading data...";
+        document.getElementById('dataContainer').innerHTML = "<p>Error loading data...</p>";
     }
 }
 
@@ -105,7 +156,6 @@ async function fetchData() {
 function toggleMode() {
     document.body.classList.toggle("dark");
 
-    // Badilisha text ya button kulingana na mode
     const btn = document.querySelector(".toggle-btn");
     if (document.body.classList.contains("dark")) {
         btn.textContent = "☀️ Light Mode";
@@ -116,7 +166,7 @@ function toggleMode() {
     }
 }
 
-// Load user preference on start
+// Load user preference
 window.onload = () => {
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme === "dark") {
@@ -124,6 +174,13 @@ window.onload = () => {
         document.querySelector(".toggle-btn").textContent = "☀️ Light Mode";
     }
     fetchData();
+}
+
+// PWA service worker
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").then(() => {
+        console.log("Service Worker Registered");
+    });
 }
 </script>
 </body>
