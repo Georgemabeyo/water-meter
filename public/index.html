@@ -46,11 +46,11 @@ main{padding:20px;}
     padding:15px;
     border-radius:8px;
     box-shadow:0 2px 5px rgba(0,0,0,0.1);
-    transition:all 0.3s ease;
+    transition:all 0.3s ease, transform 0.3s ease;
 }
 .card:hover{
     transform: translateY(-5px);
-    box-shadow:0 4px 10px rgba(0,0,0,0.2);
+    box-shadow:0 6px 15px rgba(0,0,0,0.2);
 }
 
 /* Dark Mode */
@@ -68,6 +68,7 @@ body.dark .card{background:#1e1e1e;color:#f5f5f5;box-shadow:0 2px 5px rgba(255,2
     border-radius:8px;
     background:#e0f7fa;
     text-align:center;
+    animation: fadeIn 0.5s ease-in;
 }
 #loginContainer select, #loginContainer button{
     padding:10px;
@@ -87,7 +88,13 @@ body.dark .card{background:#1e1e1e;color:#f5f5f5;box-shadow:0 2px 5px rgba(255,2
 }
 
 /* Hide dashboard by default */
-#dashboardContainer{display:none;}
+#dashboardContainer{display:none;animation: fadeIn 0.5s ease-in;}
+
+/* Animations */
+@keyframes fadeIn {
+    from{opacity:0;}
+    to{opacity:1;}
+}
 </style>
 </head>
 <body>
@@ -151,6 +158,9 @@ window.onload = () => {
         document.body.classList.add("dark");
         document.querySelector(".toggle-btn").textContent="☀️ Light Mode";
     }
+
+    // Check if already logged in
+    checkLogin();
 }
 
 // Login
@@ -166,9 +176,7 @@ async function login(){
         });
         const data = await res.json();
         if(data.message){
-            document.getElementById("loginContainer").style.display="none";
-            document.getElementById("dashboardContainer").style.display="block";
-            fetchData();
+            showDashboard();
         }
     }catch(err){
         alert("Login failed");
@@ -180,6 +188,26 @@ async function logout(){
     await fetch("/logout",{ method:"POST", credentials:"include" });
     document.getElementById("loginContainer").style.display="block";
     document.getElementById("dashboardContainer").style.display="none";
+}
+
+// Show dashboard
+function showDashboard(){
+    document.getElementById("loginContainer").style.display="none";
+    document.getElementById("dashboardContainer").style.display="block";
+    fetchData();
+}
+
+// Check login status
+async function checkLogin(){
+    try{
+        const res = await fetch("/api/data",{ credentials:"include" });
+        const data = await res.json();
+        if(data.room && !data.room.includes("Demo")){
+            showDashboard();
+        }
+    }catch(err){
+        console.log("Not logged in yet");
+    }
 }
 
 // Fetch room data
@@ -224,9 +252,10 @@ async function fetchData(){
 
 // PWA Service Worker
 if("serviceWorker" in navigator){
-    navigator.serviceWorker.register("service-worker.js").then(()=>console.log("Service Worker Registered"));
+    navigator.serviceWorker.register("/service-worker.js")
+    .then(()=>console.log("Service Worker Registered"))
+    .catch(err=>console.error("SW registration failed:",err));
 }
 </script>
-
 </body>
 </html>
