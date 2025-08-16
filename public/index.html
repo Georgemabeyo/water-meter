@@ -7,85 +7,219 @@
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link rel="stylesheet" href="css/style.css">
+<style>
+/* Basic Styles */
+body {
+    margin:0;
+    font-family: Arial,sans-serif;
+    background:#f9f9f9;
+    color:#333;
+    transition: background 0.3s,color 0.3s;
+}
+header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:15px 20px;
+    background:#0077b6;
+    color:white;
+}
+header h1{font-size:20px;margin:0;}
+.toggle-btn{
+    background:none;
+    border:2px solid white;
+    border-radius:25px;
+    padding:5px 15px;
+    cursor:pointer;
+    color:white;
+    transition:all 0.3s ease;
+}
+.toggle-btn:hover{background:white;color:#0077b6;}
+main{padding:20px;}
+.data-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:15px;
+}
+.card{
+    background:white;
+    padding:15px;
+    border-radius:8px;
+    box-shadow:0 2px 5px rgba(0,0,0,0.1);
+    transition:all 0.3s ease;
+}
+.card:hover{
+    transform: translateY(-5px);
+    box-shadow:0 4px 10px rgba(0,0,0,0.2);
+}
+
+/* Dark Mode */
+body.dark{background:#121212;color:#f5f5f5;}
+body.dark header{background:#222;color:#f5f5f5;}
+body.dark .toggle-btn{border-color:#f5f5f5;color:#f5f5f5;}
+body.dark .toggle-btn:hover{background:#f5f5f5;color:#222;}
+body.dark .card{background:#1e1e1e;color:#f5f5f5;box-shadow:0 2px 5px rgba(255,255,255,0.1);}
+
+/* Login form */
+#loginContainer{
+    max-width:400px;
+    margin:40px auto;
+    padding:20px;
+    border-radius:8px;
+    background:#e0f7fa;
+    text-align:center;
+}
+#loginContainer select, #loginContainer button{
+    padding:10px;
+    margin-top:10px;
+    font-size:16px;
+    border-radius:5px;
+}
+#loginContainer button{
+    background:#0077b6;
+    color:white;
+    border:none;
+    cursor:pointer;
+    transition:all 0.3s ease;
+}
+#loginContainer button:hover{
+    background:#005f86;
+}
+
+/* Hide dashboard by default */
+#dashboardContainer{display:none;}
+</style>
 </head>
 <body>
+
 <header>
     <h1>💧 Water Meter Dashboard</h1>
     <button class="toggle-btn" onclick="toggleMode()">🌙 Dark Mode</button>
 </header>
 
 <main>
-    <h2>Latest Data</h2>
-    <div id="dataContainer" class="data-grid">Loading...</div>
+    <!-- Login Form -->
+    <div id="loginContainer">
+        <h2>Select Your Room</h2>
+        <select id="roomSelect">
+            <option value="">--Choose Room--</option>
+            <option value="R001">Room 1</option>
+            <option value="R002">Room 2</option>
+            <option value="R003">Room 3</option>
+            <option value="R004">Room 4</option>
+            <option value="R005">Room 5</option>
+            <option value="R006">Room 6</option>
+            <option value="R007">Room 7</option>
+            <option value="R008">Room 8</option>
+            <option value="R009">Room 9</option>
+            <option value="R010">Room 10</option>
+        </select>
+        <br>
+        <button onclick="login()">Login</button>
+    </div>
 
-    <h2>Usage Chart</h2>
-    <canvas id="usageChart"></canvas>
+    <!-- Dashboard -->
+    <div id="dashboardContainer">
+        <h2>Latest Data</h2>
+        <div id="dataContainer" class="data-grid">Loading...</div>
+
+        <h2>Usage Chart</h2>
+        <canvas id="usageChart"></canvas>
+        <br>
+        <button onclick="logout()" style="margin-top:20px;">Logout</button>
+    </div>
 </main>
 
 <script>
-async function fetchData() {
-    try {
-        const res = await fetch('/api/data');
+// Dark mode toggle
+function toggleMode(){
+    document.body.classList.toggle("dark");
+    const btn=document.querySelector(".toggle-btn");
+    if(document.body.classList.contains("dark")){
+        btn.textContent="☀️ Light Mode";
+        localStorage.setItem("theme","dark");
+    }else{
+        btn.textContent="🌙 Dark Mode";
+        localStorage.setItem("theme","light");
+    }
+}
+
+// Load user theme
+window.onload = () => {
+    const savedTheme = localStorage.getItem("theme");
+    if(savedTheme==="dark"){
+        document.body.classList.add("dark");
+        document.querySelector(".toggle-btn").textContent="☀️ Light Mode";
+    }
+}
+
+// Login
+async function login(){
+    const room = document.getElementById("roomSelect").value;
+    if(!room){ alert("Please select a room."); return; }
+    try{
+        const res = await fetch("/login", {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({ room }),
+            credentials:"include"
+        });
+        const data = await res.json();
+        if(data.message){
+            document.getElementById("loginContainer").style.display="none";
+            document.getElementById("dashboardContainer").style.display="block";
+            fetchData();
+        }
+    }catch(err){
+        alert("Login failed");
+    }
+}
+
+// Logout
+async function logout(){
+    await fetch("/logout",{ method:"POST", credentials:"include" });
+    document.getElementById("loginContainer").style.display="block";
+    document.getElementById("dashboardContainer").style.display="none";
+}
+
+// Fetch room data
+async function fetchData(){
+    try{
+        const res = await fetch("/api/data",{ credentials:"include" });
         const data = await res.json();
 
-        const container = document.getElementById('dataContainer');
+        const container = document.getElementById("dataContainer");
         container.innerHTML = "";
-        Object.entries(data).forEach(([key, value]) => {
-            if(typeof value === 'object'){
-                return; // skip dailyUsage for cards
-            }
+        Object.entries(data).forEach(([key,value])=>{
+            if(typeof value==="object") return;
             const card = document.createElement("div");
-            card.className = "card";
-            card.innerHTML = `<h3>${key}</h3><p>${value}</p>`;
+            card.className="card";
+            card.innerHTML=`<h3>${key}</h3><p>${value}</p>`;
             container.appendChild(card);
         });
 
         // Chart
         if(data.dailyUsage){
             const ctx = document.getElementById("usageChart").getContext("2d");
-            new Chart(ctx, {
-                type: "line",
-                data: {
-                    labels: Object.keys(data.dailyUsage),
-                    datasets: [{
-                        label: "Water Usage (Liters)",
-                        data: Object.values(data.dailyUsage),
-                        borderColor: "#0077b6",
-                        backgroundColor: "rgba(0,119,182,0.2)",
-                        fill: true,
-                        tension: 0.3
+            new Chart(ctx,{
+                type:"line",
+                data:{
+                    labels:Object.keys(data.dailyUsage),
+                    datasets:[{
+                        label:"Water Usage (Liters)",
+                        data:Object.values(data.dailyUsage),
+                        borderColor:"#0077b6",
+                        backgroundColor:"rgba(0,119,182,0.2)",
+                        fill:true,
+                        tension:0.3
                     }]
                 },
-                options: { responsive: true }
+                options:{ responsive:true }
             });
         }
-
-    } catch(err){
-        document.getElementById('dataContainer').innerHTML = "<p>Error loading data...</p>";
+    }catch(err){
+        document.getElementById("dataContainer").innerHTML="<p>Error loading data...</p>";
     }
-}
-
-// Dark mode toggle
-function toggleMode() {
-    document.body.classList.toggle("dark");
-    const btn = document.querySelector(".toggle-btn");
-    if(document.body.classList.contains("dark")){
-        btn.textContent = "☀️ Light Mode";
-        localStorage.setItem("theme","dark");
-    } else {
-        btn.textContent = "🌙 Dark Mode";
-        localStorage.setItem("theme","light");
-    }
-}
-
-// Load user theme preference
-window.onload = () => {
-    const savedTheme = localStorage.getItem("theme");
-    if(savedTheme === "dark"){
-        document.body.classList.add("dark");
-        document.querySelector(".toggle-btn").textContent = "☀️ Light Mode";
-    }
-    fetchData();
 }
 
 // PWA Service Worker
@@ -93,5 +227,6 @@ if("serviceWorker" in navigator){
     navigator.serviceWorker.register("service-worker.js").then(()=>console.log("Service Worker Registered"));
 }
 </script>
+
 </body>
 </html>
