@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - Water Meter</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<header>
+    <h1>💧 Water Meter Dashboard</h1>
+    <div>
+        <button class="toggle-btn" onclick="toggleMode()">🌙 Dark Mode</button>
+        <button onclick="logout()">Logout</button>
+    </div>
+</header>
+
+<main>
+    <div class="data-grid" id="dataContainer">
+        <p>Loading...</p>
+    </div>
+
+    <h2>Daily Usage</h2>
+    <canvas id="dailyChart"></canvas>
+
+    <h2>Monthly Usage</h2>
+    <canvas id="monthlyChart"></canvas>
+</main>
+
+<script src="js/dashboard.js"></script>
+</body>
+</html>
