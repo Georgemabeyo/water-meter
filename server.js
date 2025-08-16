@@ -1,71 +1,96 @@
+// server.js
 const express = require('express');
-const bodyParser = require('body-parser');
+const path = require('path');
 const session = require('express-session');
+
 const app = express();
-const port = 3000;
+const PORT = process.env.PORT || 3000;
 
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-app.use(express.static('public'));
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
+// Static files
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Session setup
 app.use(session({
-  secret: 'secret-key',
-  resave: false,
-  saveUninitialized: true
+    secret: 'watermetersecret',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { maxAge: 24 * 60 * 60 * 1000 } // 1 day
 }));
 
-// Mock users data
-const users = [
-  { username: "user101", password: "1234", room: "101" },
-  { username: "user102", password: "1234", room: "102" }
-];
+// Simple login route (for demonstration)
+app.post('/login', (req, res) => {
+    const { room } = req.body;
+    if (!room) return res.status(400).json({ error: "Room is required" });
 
-// Mock water data
-const waterData = {
-  "101": {
-    room: "101",
-    currentUsage: 12,
-    totalUsage: 234,
-    amountDue: 5600,
-    lastReading: "2025-08-16",
-    dailyUsage: { "2025-08-10": 10, "2025-08-11": 12, "2025-08-12": 8 },
-    monthlyUsage: { "Jan": 120, "Feb": 135, "Mar": 140 }
-  },
-  "102": {
-    room: "102",
-    currentUsage: 20,
-    totalUsage: 400,
-    amountDue: 10000,
-    lastReading: "2025-08-16",
-    dailyUsage: { "2025-08-10": 15, "2025-08-11": 18, "2025-08-12": 20 },
-    monthlyUsage: { "Jan": 200, "Feb": 180, "Mar": 220 }
-  }
-};
-
-// Login endpoint
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-  const user = users.find(u => u.username === username && u.password === password);
-  if (user) {
-    req.session.user = user;
-    res.json({ success: true });
-  } else {
-    res.json({ success: false, message: "Invalid credentials" });
-  }
+    // Store room in session
+    req.session.user = { room };
+    res.json({ message: "Logged in", room });
 });
 
 // Logout
-app.get('/api/logout', (req, res) => {
-  req.session.destroy();
-  res.json({ success: true });
+app.post('/logout', (req, res) => {
+    req.session.destroy();
+    res.json({ message: "Logged out" });
 });
 
-// Get water data for logged-in user
+// API to get water usage data
 app.get('/api/data', (req, res) => {
-  if (!req.session.user) return res.status(401).json({ error: "Not logged in" });
-  const room = req.session.user.room;
-  res.json(waterData[room]);
+    let data;
+
+    // If user is logged in, show room-specific data
+    if (req.session.user) {
+        const room = req.session.user.room;
+        data = {
+            room,
+            currentUsage: Math.floor(Math.random() * 20),
+            totalUsage: Math.floor(Math.random() * 500),
+            amountDue: Math.floor(Math.random() * 10000),
+            lastReading: new Date().toISOString().split('T')[0],
+            dailyUsage: {
+                "2025-08-10": Math.floor(Math.random() * 20),
+                "2025-08-11": Math.floor(Math.random() * 20),
+                "2025-08-12": Math.floor(Math.random() * 20)
+            },
+            monthlyUsage: {
+                Jan: Math.floor(Math.random() * 200),
+                Feb: Math.floor(Math.random() * 200),
+                Mar: Math.floor(Math.random() * 200)
+            }
+        };
+    } else {
+        // Public demo data
+        data = {
+            room: "Demo Room",
+            currentUsage: 12,
+            totalUsage: 234,
+            amountDue: 5600,
+            lastReading: "2025-08-16",
+            dailyUsage: {
+                "2025-08-10": 10,
+                "2025-08-11": 12,
+                "2025-08-12": 8
+            },
+            monthlyUsage: {
+                Jan: 120,
+                Feb: 135,
+                Mar: 140
+            }
+        };
+    }
+
+    res.json(data);
+});
+
+// Serve index.html for any other route (SPA)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Start server
-app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
